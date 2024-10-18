@@ -19,23 +19,21 @@ loadScript(chrome.runtime.getURL('lib/pdf-lib.min.js'))
 
 function initApp() {
     document.addEventListener('DOMContentLoaded', function() {
-        const folderInput = document.getElementById('folderInput');
+        const pdfInput = document.getElementById('pdfInput');
         const mergeButton = document.getElementById('mergeButton');
         const statusDiv = document.getElementById('status');
 
         mergeButton.addEventListener('click', async () => {
-            const files = folderInput.files;
-            const pdfFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.pdf'));
-
-            if (pdfFiles.length === 0) {
-                statusDiv.textContent = '未找到PDF文件';
+            const files = pdfInput.files;
+            if (files.length === 0) {
+                statusDiv.textContent = '请选择PDF文件';
                 return;
             }
 
             statusDiv.textContent = '正在合并PDF文件...';
 
             try {
-                const mergedPdf = await mergePDFs(pdfFiles);
+                const mergedPdf = await mergePDFs(Array.from(files));
                 const blob = new Blob([mergedPdf], { type: 'application/pdf' });
                 
                 chrome.runtime.sendMessage({
