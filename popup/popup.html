@@ -6,16 +6,27 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-    <h1>PDF合并工具</h1>
-    <input type="file" id="pdfInput" accept=".pdf" multiple>
-    <div id="fileList"></div>
-    <input type="text" id="outputFileName" placeholder="输出文件名 (默认: merged.pdf)">
-    <button id="mergeButton">合并PDF</button>
-    <div id="progressContainer" style="display: none;">
-        <progress id="progressBar" value="0" max="100"></progress>
-        <span id="progressText">0%</span>
+    <div class="container">
+        <h1>PDF合并工具</h1>
+        <div class="input-group">
+            <label for="pdfInput" class="file-input-label">选择PDF文件</label>
+            <input type="file" id="pdfInput" accept=".pdf" multiple>
+        </div>
+        <div id="fileList"></div>
+        <div class="input-group">
+            <input type="text" id="outputFileName" placeholder="输出文件名 (默认: merged.pdf)">
+        </div>
+        <button id="mergeButton">合并PDF</button>
+        <div id="progressContainer" style="display: none;">
+            <div class="progress-wrapper">
+                <div class="progress-bar">
+                    <div id="progressBar"></div>
+                </div>
+                <span id="progressText">0%</span>
+            </div>
+        </div>
+        <div id="status"></div>
     </div>
-    <div id="status"></div>
     <script src="../lib/pdf-lib.min.js"></script>
     <script src="popup.js"></script>
 </body>

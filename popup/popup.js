@@ -108,7 +108,9 @@ function initApp() {
         }
 
         function updateProgress(percent) {
-            progressBar.value = percent;
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressBar.style.width = `${percent}%`;
             progressText.textContent = `${Math.round(percent)}%`;
         }
     });
