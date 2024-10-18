@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "PDF合并工具",
+  "version": "1.0",
+  "description": "合并文件夹中的所有PDF文件",
+  "permissions": ["storage", "downloads"],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/pdf-lib.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
