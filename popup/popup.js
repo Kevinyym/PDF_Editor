@@ -123,6 +123,10 @@ function initApp() {
 
         function updateFileList() {
             selectedFiles = Array.from(pdfInput.files);
+            renderFileList();
+        }
+
+        function renderFileList() {
             fileList.innerHTML = '';
             selectedFiles.forEach((file, index) => {
                 const fileItem = document.createElement('div');
@@ -147,13 +151,13 @@ function initApp() {
             const newIndex = index + direction;
             if (newIndex >= 0 && newIndex < selectedFiles.length) {
                 [selectedFiles[index], selectedFiles[newIndex]] = [selectedFiles[newIndex], selectedFiles[index]];
-                updateFileList();
+                renderFileList();
             }
         }
 
         function removeFile(index) {
             selectedFiles.splice(index, 1);
-            updateFileList();
+            renderFileList();
         }
 
         async function mergePDFs() {
