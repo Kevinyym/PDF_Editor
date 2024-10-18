@@ -21,43 +21,93 @@ function initApp() {
     document.addEventListener('DOMContentLoaded', function() {
         const pdfInput = document.getElementById('pdfInput');
         const mergeButton = document.getElementById('mergeButton');
+        const splitPdfInput = document.getElementById('splitPdfInput');
+        const splitButton = document.getElementById('splitButton');
         const statusDiv = document.getElementById('status');
         const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
         const fileList = document.getElementById('fileList');
         const outputFileName = document.getElementById('outputFileName');
+        const splitFileInfo = document.getElementById('splitFileInfo');
+        const pageRange = document.getElementById('pageRange');
 
         let selectedFiles = [];
+        let splitPdfFile = null;
 
-        pdfInput.addEventListener('change', () => {
-            selectedFiles = Array.from(pdfInput.files);
-            updateFileList();
+        // Tab switching
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(`${tabName}Tab`).classList.add('active');
+            });
         });
 
-        mergeButton.addEventListener('click', async () => {
-            if (selectedFiles.length === 0) {
-                statusDiv.textContent = '请选择PDF文件';
+        // Merge PDF functionality
+        pdfInput.addEventListener('change', updateFileList);
+        mergeButton.addEventListener('click', mergePDFs);
+
+        // Split PDF functionality
+        splitPdfInput.addEventListener('change', async function() {
+            const file = this.files[0];
+            if (file) {
+                selectedSplitFile = file; // 保存选中的文件
+                try {
+                    const pdfDoc = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+                    const pageCount = pdfDoc.getPageCount();
+                    splitFileInfo.textContent = `文件名: ${file.name}, 总页数: ${pageCount}`;
+                } catch (error) {
+                    console.error('读取PDF文件失败:', error);
+                    splitFileInfo.textContent = '读取PDF文件失败';
+                    selectedSplitFile = null; // 重置选中的文件
+                }
+            } else {
+                splitFileInfo.textContent = '';
+                selectedSplitFile = null; // 重置选中的文件
+            }
+        });
+        splitButton.addEventListener('click', async function() {
+            if (!selectedSplitFile) {
+                statusDiv.textContent = '请选择要分隔的PDF文件';
                 return;
             }
 
-            statusDiv.textContent = '正在准备合并PDF文件...';
+            const range = pageRange.value.trim();
+            if (!range) {
+                statusDiv.textContent = '请输入要提取的页面范围';
+                return;
+            }
+
+            statusDiv.textContent = '正在分隔PDF文件...';
             progressContainer.style.display = 'block';
             updateProgress(0);
 
             try {
-                const mergedPdf = await mergePDFs(selectedFiles, updateProgress);
-                const blob = new Blob([mergedPdf], { type: 'application/pdf' });
-                
-                const fileName = outputFileName.value.trim() || 'merged.pdf';
-                
+                const pdfBytes = await readFileAsArrayBuffer(selectedSplitFile);
+                const pdf = await PDFLib.PDFDocument.load(pdfBytes);
+                const newPdf = await PDFLib.PDFDocument.create();
+                const pages = parsePageRange(range, pdf.getPageCount());
+
+                for (let i = 0; i < pages.length; i++) {
+                    const [copiedPage] = await newPdf.copyPages(pdf, [pages[i] - 1]);
+                    newPdf.addPage(copiedPage);
+                    updateProgress((i + 1) / pages.length * 100);
+                }
+
+                const newPdfBytes = await newPdf.save();
+                const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+
                 chrome.runtime.sendMessage({
                     action: "downloadPDF",
                     url: URL.createObjectURL(blob),
-                    filename: fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`
+                    filename: `split_${selectedSplitFile.name}`
                 }, (response) => {
                     if (response.success) {
-                        statusDiv.textContent = 'PDF文件已成功合并并开始下载';
+                        statusDiv.textContent = 'PDF文件已成功分隔并开始下载';
                     } else {
                         console.error('下载失败:', response.error);
                         statusDiv.textContent = '下载失败,请重试';
@@ -65,13 +115,14 @@ function initApp() {
                     progressContainer.style.display = 'none';
                 });
             } catch (error) {
-                console.error('PDF合并失败:', error);
-                statusDiv.textContent = 'PDF合并失败,请重试';
+                console.error('PDF分隔失败:', error);
+                statusDiv.textContent = 'PDF分隔失败,请重试';
                 progressContainer.style.display = 'none';
             }
         });
 
         function updateFileList() {
+            selectedFiles = Array.from(pdfInput.files);
             fileList.innerHTML = '';
             selectedFiles.forEach((file, index) => {
                 const fileItem = document.createElement('div');
@@ -95,9 +146,7 @@ function initApp() {
         function moveFile(index, direction) {
             const newIndex = index + direction;
             if (newIndex >= 0 && newIndex < selectedFiles.length) {
-                const temp = selectedFiles[index];
-                selectedFiles[index] = selectedFiles[newIndex];
-                selectedFiles[newIndex] = temp;
+                [selectedFiles[index], selectedFiles[newIndex]] = [selectedFiles[newIndex], selectedFiles[index]];
                 updateFileList();
             }
         }
@@ -107,37 +156,94 @@ function initApp() {
             updateFileList();
         }
 
-        function updateProgress(percent) {
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            progressBar.style.width = `${percent}%`;
-            progressText.textContent = `${Math.round(percent)}%`;
+        async function mergePDFs() {
+            if (selectedFiles.length === 0) {
+                statusDiv.textContent = '请选择PDF文件';
+                return;
+            }
+
+            statusDiv.textContent = '正在准备合并PDF文件...';
+            progressContainer.style.display = 'block';
+            updateProgress(0);
+
+            try {
+                const mergedPdf = await mergePDFFiles(selectedFiles, updateProgress);
+                const blob = new Blob([mergedPdf], { type: 'application/pdf' });
+                
+                const fileName = outputFileName.value.trim() || 'merged.pdf';
+                
+                chrome.runtime.sendMessage({
+                    action: "downloadPDF",
+                    url: URL.createObjectURL(blob),
+                    filename: fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`
+                }, (response) => {
+                    if (response.success) {
+                        statusDiv.textContent = 'PDF文件已成功合并并开始下载';
+                    } else {
+                        console.error('下载失败:', response.error);
+                        statusDiv.textContent = '下载失败,请重试';
+                    }
+                    progressContainer.style.display = 'none';
+                });
+            } catch (error) {
+                console.error('PDF合并失败:', error);
+                statusDiv.textContent = 'PDF合并失败,请重试';
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        function parsePageRange(range, totalPages) {
+            const pages = new Set();
+            const parts = range.split(',');
+
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(num => parseInt(num.trim()));
+                    for (let i = start; i <= end && i <= totalPages; i++) {
+                        pages.add(i);
+                    }
+                } else {
+                    const pageNum = parseInt(part.trim());
+                    if (pageNum <= totalPages) {
+                        pages.add(pageNum);
+                    }
+                }
+            }
+
+            return Array.from(pages).sort((a, b) => a - b);
         }
     });
 
-    async function mergePDFs(pdfFiles, updateProgress) {
-        const pdfDoc = await PDFLib.PDFDocument.create();
-        const totalFiles = pdfFiles.length;
+    function updateProgress(percent) {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        progressBar.style.width = `${percent}%`;
+        progressText.textContent = `${Math.round(percent)}%`;
+    }
+}
 
-        for (let i = 0; i < totalFiles; i++) {
-            const pdfFile = pdfFiles[i];
-            const pdfBytes = await readFileAsArrayBuffer(pdfFile);
-            const pdf = await PDFLib.PDFDocument.load(pdfBytes);
-            const copiedPages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-            copiedPages.forEach((page) => pdfDoc.addPage(page));
+async function mergePDFFiles(pdfFiles, updateProgress) {
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    const totalFiles = pdfFiles.length;
 
-            updateProgress((i + 1) / totalFiles * 100);
-        }
+    for (let i = 0; i < totalFiles; i++) {
+        const pdfFile = pdfFiles[i];
+        const pdfBytes = await readFileAsArrayBuffer(pdfFile);
+        const pdf = await PDFLib.PDFDocument.load(pdfBytes);
+        const copiedPages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+        copiedPages.forEach((page) => pdfDoc.addPage(page));
 
-        return pdfDoc.save();
+        updateProgress((i + 1) / totalFiles * 100);
     }
 
-    function readFileAsArrayBuffer(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsArrayBuffer(file);
-        });
-    }
+    return pdfDoc.save();
+}
+
+function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
 }

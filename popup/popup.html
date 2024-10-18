@@ -2,21 +2,38 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>PDF合并工具</title>
+    <title>PDF工具</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="container">
-        <h1>PDF合并工具</h1>
-        <div class="input-group">
-            <label for="pdfInput" class="file-input-label">选择PDF文件</label>
-            <input type="file" id="pdfInput" accept=".pdf" multiple>
+        <h1>PDF工具</h1>
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="merge">合并PDF</button>
+            <button class="tab-button" data-tab="split">分隔PDF</button>
         </div>
-        <div id="fileList"></div>
-        <div class="input-group">
-            <input type="text" id="outputFileName" placeholder="输出文件名 (默认: merged.pdf)">
+        <div id="mergeTab" class="tab-content active">
+            <div class="input-group">
+                <label for="pdfInput" class="file-input-label">选择PDF文件</label>
+                <input type="file" id="pdfInput" accept=".pdf" multiple>
+            </div>
+            <div id="fileList"></div>
+            <div class="input-group">
+                <input type="text" id="outputFileName" placeholder="输出文件名 (默认: merged.pdf)">
+            </div>
+            <button id="mergeButton">合并PDF</button>
         </div>
-        <button id="mergeButton">合并PDF</button>
+        <div id="splitTab" class="tab-content">
+            <div class="input-group">
+                <label for="splitPdfInput" class="file-input-label">选择要分隔的PDF文件</label>
+                <input type="file" id="splitPdfInput" accept=".pdf">
+            </div>
+            <div id="splitFileInfo"></div>
+            <div class="input-group">
+                <input type="text" id="pageRange" placeholder="页面范围 (例如: 1-3,5,7-9)">
+            </div>
+            <button id="splitButton">分隔PDF</button>
+        </div>
         <div id="progressContainer" style="display: none;">
             <div class="progress-wrapper">
                 <div class="progress-bar">
