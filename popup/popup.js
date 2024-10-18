@@ -22,6 +22,9 @@ function initApp() {
         const pdfInput = document.getElementById('pdfInput');
         const mergeButton = document.getElementById('mergeButton');
         const statusDiv = document.getElementById('status');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
 
         mergeButton.addEventListener('click', async () => {
             const files = pdfInput.files;
@@ -30,10 +33,12 @@ function initApp() {
                 return;
             }
 
-            statusDiv.textContent = '正在合并PDF文件...';
+            statusDiv.textContent = '正在准备合并PDF文件...';
+            progressContainer.style.display = 'block';
+            updateProgress(0);
 
             try {
-                const mergedPdf = await mergePDFs(Array.from(files));
+                const mergedPdf = await mergePDFs(Array.from(files), updateProgress);
                 const blob = new Blob([mergedPdf], { type: 'application/pdf' });
                 
                 chrome.runtime.sendMessage({
@@ -47,23 +52,34 @@ function initApp() {
                         console.error('下载失败:', response.error);
                         statusDiv.textContent = '下载失败,请重试';
                     }
+                    progressContainer.style.display = 'none';
                 });
             } catch (error) {
                 console.error('PDF合并失败:', error);
                 statusDiv.textContent = 'PDF合并失败,请重试';
+                progressContainer.style.display = 'none';
             }
         });
     });
+
+    function updateProgress(percent) {
+        progressBar.value = percent;
+        progressText.textContent = `${Math.round(percent)}%`;
+    }
 }
 
-async function mergePDFs(pdfFiles) {
+async function mergePDFs(pdfFiles, updateProgress) {
     const pdfDoc = await PDFLib.PDFDocument.create();
+    const totalFiles = pdfFiles.length;
 
-    for (const pdfFile of pdfFiles) {
+    for (let i = 0; i < totalFiles; i++) {
+        const pdfFile = pdfFiles[i];
         const pdfBytes = await readFileAsArrayBuffer(pdfFile);
         const pdf = await PDFLib.PDFDocument.load(pdfBytes);
         const copiedPages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
         copiedPages.forEach((page) => pdfDoc.addPage(page));
+
+        updateProgress((i + 1) / totalFiles * 100);
     }
 
     return pdfDoc.save();

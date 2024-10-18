@@ -18,3 +18,16 @@ button {
     margin-top: 10px;
     font-style: italic;
 }
+
+#progressContainer {
+    margin-top: 10px;
+}
+
+#progressBar {
+    width: 100%;
+}
+
+#progressText {
+    display: inline-block;
+    margin-left: 5px;
+}

@@ -9,6 +9,10 @@
     <h1>PDF合并工具</h1>
     <input type="file" id="pdfInput" accept=".pdf" multiple>
     <button id="mergeButton">合并PDF</button>
+    <div id="progressContainer" style="display: none;">
+        <progress id="progressBar" value="0" max="100"></progress>
+        <span id="progressText">0%</span>
+    </div>
     <div id="status"></div>
     <script src="../lib/pdf-lib.min.js"></script>
     <script src="popup.js"></script>
