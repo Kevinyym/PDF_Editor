@@ -8,6 +8,8 @@
 <body>
     <h1>PDF合并工具</h1>
     <input type="file" id="pdfInput" accept=".pdf" multiple>
+    <div id="fileList"></div>
+    <input type="text" id="outputFileName" placeholder="输出文件名 (默认: merged.pdf)">
     <button id="mergeButton">合并PDF</button>
     <div id="progressContainer" style="display: none;">
         <progress id="progressBar" value="0" max="100"></progress>
